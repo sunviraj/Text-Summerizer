@@ -1,9 +1,14 @@
-print("hello")
+print("Starting Summarizer...")
 
 from transformers import pipeline
 
 # Initialize the summarization pipeline
-summarizer = pipeline("summarization")
+try:
+    summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+    print("Summarizer model loaded successfully.")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    summarizer = None
 
 def summarize_paragraph(paragraph, max_length=100, min_length=25):
     """
@@ -15,13 +20,20 @@ def summarize_paragraph(paragraph, max_length=100, min_length=25):
     min_length (int): Minimum length of the summary.
 
     Returns:
-    str: The summarized text.
+    str: The summarized text or an error message.
     """
+    if not summarizer:
+        return "Summarizer pipeline is not initialized. Please check your setup."
+    
     try:
-        summary = summarizer(paragraph, max_length=max_length, min_length=min_length, do_sample=False)
+        # Adjust max_length dynamically if paragraph is short
+        words_count = len(paragraph.split())
+        adjusted_max_length = min(max_length, max(50, words_count // 2))
+        
+        summary = summarizer(paragraph, max_length=adjusted_max_length, min_length=min_length, do_sample=False)
         return summary[0]['summary_text']
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error during summarization: {e}"
 
 # Input paragraph
 paragraph = """
@@ -33,8 +45,11 @@ and versatile, helping businesses optimize operations and improve user experienc
 """
 
 # Generate summary
-summary = summarize_paragraph(paragraph)
-print("Original Paragraph:")
-print(paragraph)
-print("\nSummarized Text:")
-print(summary)
+if paragraph.strip():
+    summary = summarize_paragraph(paragraph)
+    print("\nOriginal Paragraph:")
+    print(paragraph.strip())
+    print("\nSummarized Text:")
+    print(summary)
+else:
+    print("No input paragraph provided. Please enter a valid text.")
